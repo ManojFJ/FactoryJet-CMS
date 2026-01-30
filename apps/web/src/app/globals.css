@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --card: #141414;
+  --card-hover: #1a1a1a;
+  --border: #2a2a2a;
+  --border-hover: #3a3a3a;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --muted: #737373;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --code-bg: #1e1e1e;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
+
+/* Code block styling */
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+code {
+  font-family: "SF Mono", "Fira Code", "Fira Mono", monospace;
+}
+
+/* Markdown in chat */
+.chat-markdown h1,
+.chat-markdown h2,
+.chat-markdown h3 {
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.chat-markdown p {
+  margin-bottom: 0.75em;
+}
+
+.chat-markdown ul,
+.chat-markdown ol {
+  margin-left: 1.5em;
+  margin-bottom: 0.75em;
+}
+
+.chat-markdown li {
+  margin-bottom: 0.25em;
+}

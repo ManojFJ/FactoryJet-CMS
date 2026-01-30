@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install:*)",
+      "Bash(npx drizzle-kit generate)",
+      "Bash(npx wrangler deploy:*)",
+      "Bash(node -e:*)",
+      "Bash(npx wrangler d1 execute:*)",
+      "Bash(npx wrangler dev:*)",
+      "Bash(timeout:*)",
+      "Bash(npx next dev:*)",
+      "Bash(ping:*)",
+      "Bash(git init:*)",
+      "Bash(git branch:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

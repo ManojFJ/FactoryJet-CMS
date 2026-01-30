@@ -1,0 +1,25 @@
+name = "codecraft-api"
+main = "src/index.ts"
+compatibility_date = "2024-12-18"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "development"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "factoryjet-cms"
+database_id = "15b6580f-2ddc-4bda-aecd-1ae3b814756c"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "codecraft-storage"
+
+[durable_objects]
+bindings = [
+  { name = "CHAT_ROOM", class_name = "ChatRoom" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["ChatRoom"]
