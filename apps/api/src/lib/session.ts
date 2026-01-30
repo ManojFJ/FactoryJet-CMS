@@ -35,7 +35,7 @@ export async function createSession(
   setCookie(c, SESSION_COOKIE, sessionId, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: "Lax",
+    sameSite: isProduction ? "None" : "Lax",
     path: "/",
     maxAge: SESSION_DURATION_MS / 1000,
   });
