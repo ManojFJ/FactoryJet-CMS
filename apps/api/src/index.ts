@@ -5,8 +5,6 @@ import type { Env } from "./types";
 import { authRoutes } from "./routes/auth";
 import { projectRoutes } from "./routes/projects";
 import { chatRoutes } from "./routes/chat";
-import { ChatRoom } from "./lib/chat-room";
-
 export type AppType = typeof app;
 
 const app = new Hono<{ Bindings: Env }>();
@@ -30,8 +28,5 @@ app.get("/", (c) => c.json({ status: "ok", service: "codecraft-api" }));
 app.route("/auth", authRoutes);
 app.route("/projects", projectRoutes);
 app.route("/chat", chatRoutes);
-
-// Export Durable Object
-export { ChatRoom };
 
 export default app;
