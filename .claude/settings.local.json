@@ -12,7 +12,13 @@
       "Bash(ping:*)",
       "Bash(git init:*)",
       "Bash(git branch:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: CodeCraft AI coding agent platform\n\nFull-stack monorepo with:\n- apps/api: Hono API on Cloudflare Workers \\(D1, GitHub OAuth, Gemini AI agent\\)\n- apps/web: Next.js frontend \\(chat UI, project dashboard, code change cards\\)\n- packages/db: Drizzle ORM schema \\(users, sessions, projects, conversations, messages\\)\n- packages/shared: Shared types and validators\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(gh auth status:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nConfigure for Cloudflare production deployment\n\n- Next.js: static export with unoptimized images for Pages\n- Session cookies: sameSite=None in production for cross-origin auth\n- Wrangler: set ENVIRONMENT to production\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nRemove unused R2 and Durable Object bindings for deployment\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }
