@@ -1,443 +1,122 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import {
-  getConversations,
-  getMessages,
-  streamChat,
-  applyChanges,
-} from "@/lib/api";
-import { CodeChangeCard } from "./code-change-card";
+import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Copy, Check, Send, Bot, User } from "lucide-react";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
-interface ChatViewProps {
-  project: any;
-  user: any;
-  onBack: () => void;
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }
 
-interface ChatMessage {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  codeChanges?: any[];
-  streaming?: boolean;
-  statusText?: string;
-}
+// --- 1. Code Block Component (Syntax Highlighting + Copy) ---
+const CodeBlock = ({ language, code }: { language: string; code: string }) => {
+  const [copied, setCopied] = useState(false);
 
-/** Animated dots indicator for thinking/loading states */
-function ThinkingIndicator({ text }: { text?: string }) {
+  const onCopy = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <div className="flex items-center gap-2 text-[var(--muted)] text-sm py-1">
-      <div className="flex gap-1">
-        <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] animate-bounce" style={{ animationDelay: "0ms" }} />
-        <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] animate-bounce" style={{ animationDelay: "150ms" }} />
-        <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] animate-bounce" style={{ animationDelay: "300ms" }} />
+    <div className="relative group my-4 rounded-lg overflow-hidden border border-white/10">
+      <div className="flex items-center justify-between px-4 py-2 bg-[#1e1e1e] border-b border-white/10">
+        <span className="text-xs text-gray-400 uppercase font-mono">{language || "text"}</span>
+        <button
+          onClick={onCopy}
+          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"
+        >
+          {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+          {copied ? "Copied!" : "Copy"}
+        </button>
       </div>
-      {text && <span className="text-xs">{text}</span>}
+      <SyntaxHighlighter
+        language={language || "text"}
+        style={vscDarkPlus}
+        customStyle={{ margin: 0, padding: "1.5rem", fontSize: "0.875rem", lineHeight: "1.5" }}
+        showLineNumbers={true}
+        wrapLines={true}
+      >
+        {code}
+      </SyntaxHighlighter>
     </div>
   );
-}
+};
 
-/** Status pill shown during tool calls */
-function StatusPill({ text, icon }: { text: string; icon: string }) {
-  return (
-    <div className="inline-flex items-center gap-1.5 bg-[var(--primary)]/10 text-[var(--primary)] text-xs font-medium px-2.5 py-1 rounded-full my-1.5">
-      <span>{icon}</span>
-      <span>{text}</span>
-      <span className="w-1 h-1 rounded-full bg-[var(--primary)] animate-pulse" />
-    </div>
-  );
-}
-
-export function ChatView({ project, user, onBack }: ChatViewProps) {
-  const [conversations, setConversations] = useState<any[]>([]);
-  const [selectedConvoId, setSelectedConvoId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+// --- 2. Main Chat Component ---
+export function ChatView() {
   const [input, setInput] = useState("");
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [applying, setApplying] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const abortRef = useRef<{ abort: () => void } | null>(null);
-
-  useEffect(() => {
-    loadConversations();
-  }, [project.id]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  async function loadConversations() {
-    try {
-      const data = await getConversations(project.id);
-      setConversations(data.conversations);
-    } catch (err) {
-      console.error(err);
+  // Mock Data: This demonstrates the Markdown capabilities
+  const [messages, setMessages] = useState([
+    { role: "user", content: "Can you help me build a React button?" },
+    { 
+      role: "assistant", 
+      content: "Here is a reusable `Button` component using **Tailwind CSS**.\n\n```tsx\nexport function Button({ children }) {\n  return (\n    <button className=\"bg-blue-600 px-4 py-2 rounded text-white\">\n      {children}\n    </button>\n  );\n}\n```" 
     }
-  }
+  ]);
 
-  async function loadMessages(convoId: string) {
-    setSelectedConvoId(convoId);
-    try {
-      const data = await getMessages(convoId);
-      setMessages(data.messages);
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  function handleSend() {
-    if (!input.trim() || isStreaming) return;
-
-    const userMessage: ChatMessage = {
-      id: "temp-" + Date.now(),
-      role: "user",
-      content: input.trim(),
-    };
-
-    const assistantMessage: ChatMessage = {
-      id: "assistant-" + Date.now(),
-      role: "assistant",
-      content: "",
-      codeChanges: [],
-      streaming: true,
-      statusText: "Thinking...",
-    };
-
-    setMessages((prev) => [...prev, userMessage, assistantMessage]);
+  const sendMessage = () => {
+    if (!input.trim()) return;
+    setMessages([...messages, { role: "user", content: input }]);
     setInput("");
-    setIsStreaming(true);
-
-    const { abort } = streamChat(
-      project.id,
-      userMessage.content,
-      selectedConvoId || undefined,
-      (event) => {
-        switch (event.type) {
-          case "conversation":
-            if (event.conversationId) {
-              setSelectedConvoId(event.conversationId);
-            }
-            break;
-
-          case "status":
-            setMessages((prev) => {
-              const updated = [...prev];
-              const last = updated[updated.length - 1];
-              if (last.role === "assistant") {
-                last.statusText = event.statusText || "";
-              }
-              return updated;
-            });
-            break;
-
-          case "text":
-            setMessages((prev) => {
-              const updated = [...prev];
-              const last = updated[updated.length - 1];
-              if (last.role === "assistant") {
-                last.content += event.content || "";
-                last.statusText = undefined; // Clear status once text arrives
-              }
-              return updated;
-            });
-            break;
-
-          case "tool_call":
-            setMessages((prev) => {
-              const updated = [...prev];
-              const last = updated[updated.length - 1];
-              if (last.role === "assistant") {
-                const toolName = event.toolCall?.name || "tool";
-                const toolArgs = event.toolCall?.args || {};
-                if (toolName === "readFile") {
-                  last.statusText = `Reading ${toolArgs.path}`;
-                } else if (toolName === "searchFiles") {
-                  last.statusText = `Searching for "${toolArgs.pattern}"`;
-                } else if (toolName === "proposeChanges") {
-                  last.statusText = "Proposing changes...";
-                }
-              }
-              return updated;
-            });
-            break;
-
-          case "code_change":
-            setMessages((prev) => {
-              const updated = [...prev];
-              const last = updated[updated.length - 1];
-              if (last.role === "assistant" && event.codeChange) {
-                last.codeChanges = [
-                  ...(last.codeChanges || []),
-                  event.codeChange,
-                ];
-                last.statusText = undefined; // Clear status
-              }
-              return updated;
-            });
-            break;
-
-          case "message_saved":
-            setMessages((prev) => {
-              const updated = [...prev];
-              const last = updated[updated.length - 1];
-              if (last.role === "assistant") {
-                last.id = event.messageId;
-              }
-              return updated;
-            });
-            break;
-
-          case "done":
-            setMessages((prev) => {
-              const updated = [...prev];
-              const last = updated[updated.length - 1];
-              if (last.role === "assistant") {
-                last.streaming = false;
-                last.statusText = undefined;
-              }
-              return updated;
-            });
-            setIsStreaming(false);
-            loadConversations();
-            break;
-
-          case "error":
-            setMessages((prev) => {
-              const updated = [...prev];
-              const last = updated[updated.length - 1];
-              if (last.role === "assistant") {
-                last.content += `\n\n**Error:** ${event.error}`;
-                last.streaming = false;
-                last.statusText = undefined;
-              }
-              return updated;
-            });
-            setIsStreaming(false);
-            break;
-        }
-      }
-    );
-
-    abortRef.current = { abort };
-  }
-
-  function handleStop() {
-    if (abortRef.current) {
-      abortRef.current.abort();
-      abortRef.current = null;
-    }
-    setMessages((prev) => {
-      const updated = [...prev];
-      const last = updated[updated.length - 1];
-      if (last.role === "assistant") {
-        last.streaming = false;
-        last.statusText = undefined;
-        if (!last.content) {
-          last.content = "*Stopped by user*";
-        }
-      }
-      return updated;
-    });
-    setIsStreaming(false);
-  }
-
-  async function handleApply(messageId: string) {
-    setApplying(messageId);
-    try {
-      const result = await applyChanges(project.id, messageId);
-      alert(`Changes committed! SHA: ${result.commit.sha.slice(0, 7)}`);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to apply changes");
-    } finally {
-      setApplying(null);
-    }
-  }
-
-  function handleNewConversation() {
-    setSelectedConvoId(null);
-    setMessages([]);
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  }
+  };
 
   return (
-    <div className="h-screen flex">
-      {/* Sidebar */}
-      <div className="w-64 border-r border-[var(--border)] flex flex-col bg-[var(--card)]">
-        <div className="p-4 border-b border-[var(--border)]">
-          <button
-            onClick={onBack}
-            className="text-sm text-[var(--muted)] hover:text-white transition-colors mb-3 flex items-center gap-1"
-          >
-            &larr; Back to projects
-          </button>
-          <h2 className="font-semibold truncate text-sm">
-            {project.repoFullName}
-          </h2>
-        </div>
-
-        <div className="p-2">
-          <button
-            onClick={handleNewConversation}
-            className="w-full text-left p-2 rounded-lg text-sm hover:bg-[var(--card-hover)] transition-colors border border-dashed border-[var(--border)]"
-          >
-            + New conversation
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {conversations.map((convo) => (
-            <button
-              key={convo.id}
-              onClick={() => loadMessages(convo.id)}
-              className={`w-full text-left p-2 rounded-lg text-sm truncate transition-colors ${
-                selectedConvoId === convo.id
-                  ? "bg-[var(--primary)]/10 text-[var(--primary)]"
-                  : "hover:bg-[var(--card-hover)] text-[var(--muted)]"
-              }`}
-            >
-              {convo.title}
-            </button>
-          ))}
-        </div>
+    <div className="flex flex-col h-[600px] border border-white/10 bg-[#0a0a0a] rounded-xl overflow-hidden">
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {messages.map((msg, idx) => (
+          <div key={idx} className={`flex gap-4 ${msg.role === "assistant" ? "bg-white/5 -mx-6 px-6 py-6" : ""}`}>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 bg-white/10">
+              {msg.role === "assistant" ? <Bot size={18} className="text-blue-400" /> : <User size={18} className="text-gray-400" />}
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-300 mb-1">
+                {msg.role === "assistant" ? "FactoryJet AI" : "You"}
+              </p>
+              
+              {/* Markdown Renderer */}
+              <div className="prose prose-invert max-w-none text-gray-300 text-sm leading-relaxed">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    code({ node, inline, className, children, ...props }: any) {
+                      const match = /language-(\w+)/.exec(className || "");
+                      const codeContent = String(children).replace(/\n$/, "");
+                      if (!inline && match) {
+                        return <CodeBlock language={match[1]} code={codeContent} />;
+                      }
+                      return <code className="bg-white/10 px-1 rounded text-pink-400 text-xs" {...props}>{children}</code>;
+                    }
+                  }}
+                >
+                  {msg.content}
+                </ReactMarkdown>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Chat area */}
-      <div className="flex-1 flex flex-col">
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
-          {messages.length === 0 && (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <h3 className="text-lg font-semibold mb-2">
-                  Start a conversation
-                </h3>
-                <p className="text-[var(--muted)] text-sm max-w-md">
-                  Describe what you&apos;d like to build or change in{" "}
-                  <strong>{project.repoFullName}</strong>. The AI will read your
-                  codebase and generate changes.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[80%] ${
-                  msg.role === "user"
-                    ? "bg-[var(--primary)] text-white rounded-2xl rounded-br-sm px-4 py-2"
-                    : "bg-[var(--card)] border border-[var(--border)] rounded-2xl rounded-bl-sm px-4 py-3"
-                }`}
-              >
-                {/* Thinking/status indicator */}
-                {msg.streaming && msg.statusText && (
-                  <div className="mb-1">
-                    {msg.statusText === "Thinking..." || msg.statusText === "Processing..." ? (
-                      <ThinkingIndicator text={msg.statusText} />
-                    ) : msg.statusText.startsWith("Reading") ? (
-                      <StatusPill icon="📄" text={msg.statusText} />
-                    ) : msg.statusText.startsWith("Searching") ? (
-                      <StatusPill icon="🔍" text={msg.statusText} />
-                    ) : msg.statusText.startsWith("Proposing") ? (
-                      <StatusPill icon="✏️" text={msg.statusText} />
-                    ) : msg.statusText.startsWith("Generating") ? (
-                      <StatusPill icon="⚡" text={msg.statusText} />
-                    ) : (
-                      <ThinkingIndicator text={msg.statusText} />
-                    )}
-                  </div>
-                )}
-
-                {/* Message text */}
-                {msg.content && (
-                  <div className="chat-markdown whitespace-pre-wrap text-sm">
-                    {msg.content}
-                    {msg.streaming && !msg.statusText && (
-                      <span className="inline-block w-2 h-4 bg-current animate-pulse ml-0.5" />
-                    )}
-                  </div>
-                )}
-
-                {/* Empty streaming message with no status — show minimal indicator */}
-                {msg.streaming && !msg.content && !msg.statusText && (
-                  <ThinkingIndicator />
-                )}
-
-                {/* Code changes */}
-                {msg.codeChanges && msg.codeChanges.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-xs font-semibold text-[var(--muted)] uppercase">
-                      Proposed Changes
-                    </p>
-                    {msg.codeChanges.map((change: any, i: number) => (
-                      <CodeChangeCard key={i} change={change} />
-                    ))}
-                    {!msg.streaming && (
-                      <button
-                        onClick={() => handleApply(msg.id)}
-                        disabled={applying === msg.id}
-                        className="mt-2 bg-[var(--success)] text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-                      >
-                        {applying === msg.id
-                          ? "Committing..."
-                          : "Apply & Commit to GitHub"}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input */}
-        <div className="border-t border-[var(--border)] p-4">
-          <div className="max-w-4xl mx-auto flex gap-3">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Describe what you want to build or change..."
-              rows={1}
-              className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:border-[var(--primary)] min-h-[48px] max-h-[200px]"
-              style={{
-                height: "auto",
-                overflow: "hidden",
-              }}
-              onInput={(e) => {
-                const target = e.target as HTMLTextAreaElement;
-                target.style.height = "auto";
-                target.style.height = `${Math.min(target.scrollHeight, 200)}px`;
-              }}
-            />
-            {isStreaming ? (
-              <button
-                onClick={handleStop}
-                className="bg-red-600 text-white px-4 py-3 rounded-xl font-medium hover:bg-red-700 transition-colors self-end"
-              >
-                Stop
-              </button>
-            ) : (
-              <button
-                onClick={handleSend}
-                disabled={!input.trim()}
-                className="bg-[var(--primary)] text-white px-4 py-3 rounded-xl font-medium hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-50 self-end"
-              >
-                Send
-              </button>
-            )}
-          </div>
+      {/* Input Area */}
+      <div className="p-4 border-t border-white/10 bg-[#0a0a0a]">
+        <div className="relative">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Describe your website requirements..."
+            className="w-full bg-[#1e1e1e] text-white border border-white/10 rounded-lg p-3 pr-12 text-sm focus:outline-none focus:border-blue-500/50 resize-none h-14"
+            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), sendMessage())}
+          />
+          <button onClick={sendMessage} className="absolute right-2 top-2 p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md">
+            <Send size={16} />
+          </button>
         </div>
       </div>
     </div>
