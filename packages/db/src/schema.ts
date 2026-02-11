@@ -1,4 +1,5 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(), // nanoid
@@ -80,3 +81,25 @@ export const messages = sqliteTable("messages", {
     .notNull()
     .$defaultFn(() => new Date()),
 });
+
+export const pullRequests = sqliteTable("pull_requests", {
+  id: text("id").primaryKey(), // UUID
+  projectId: text("project_id").notNull(), // Foreign key to projects
+  githubPrId: integer("github_pr_id").notNull(), // The PR number 
+  branchName: text("branch_name").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("open"), // open, merged, closed
+  riskLevel: text("risk_level").default("low"), // low, medium, high (AI assessed)
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+}, (table) => ({
+  projectIdx: index("pr_project_idx").on(table.projectId),
+}));
+
+export type PullRequest = typeof pullRequests.$inferSelect;
+export type NewPullRequest = typeof pullRequests.$inferInsert;
