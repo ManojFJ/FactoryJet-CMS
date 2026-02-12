@@ -1,12 +1,18 @@
 export interface Env {
   DB: D1Database;
-  R2: R2Bucket;
-  CHAT_ROOM: DurableObjectNamespace;
-  GITHUB_CLIENT_ID: string;
-  GITHUB_CLIENT_SECRET: string;
-  GEMINI_API_KEY: string;
-  ENCRYPTION_KEY: string;
+  GITHUB_ID: string;
+  GITHUB_SECRET: string;
   SESSION_SECRET: string;
-  APP_URL: string;
-  ENVIRONMENT: string;
+  NEXT_PUBLIC_API_URL: string;
+}
+
+export interface CreateProjectRequest {
+  templateType: 'landing' | 'portfolio' | 'saas' | 'blog' | 'agency' | 'ecommerce';
+  prompt: string;
+}
+
+export interface ProjectResponse {
+  id: string;
+  status: 'planning' | 'coding' | 'deployed';
+  message: string;
 }
