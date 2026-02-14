@@ -101,8 +101,6 @@ export const pullRequests = sqliteTable("pull_requests", {
   projectIdx: index("pr_project_idx").on(table.projectId),
 }));
 
-export type PullRequest = typeof pullRequests.$inferSelect;
-export type NewPullRequest = typeof pullRequests.$inferInsert;
 export const branches = sqliteTable('branches', {
   id: text('id').primaryKey(),
   projectId: text('project_id')
@@ -157,3 +155,5 @@ export const prRiskFlags = sqliteTable('pr_risk_flags', {
   filePath: text('file_path'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
+export type PullRequest = typeof pullRequests.$inferSelect;
+export type NewPullRequest = typeof pullRequests.$inferInsert;
