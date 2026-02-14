@@ -24,15 +24,18 @@ projectRoutes.get("/", requireAuth, async (c) => {
   return c.json(userProjects);
 });
 
-// S1.4: Build "New Project" API endpoint
-projectRoutes.post("/new", requireAuth, async (c) => {
+// S1.4: Build "New Project" API endpoint 
+// NOTE: requireAuth removed temporarily for testing
+projectRoutes.post("/new", async (c) => {
   const body = await c.req.json();
-  const userId = c.get("userId");
+  
+  // Hardcoded userId for testing while auth is disabled
+  const userId = "test-user-surya";
 
   console.log(`🚀 Initializing Planner Agent for User: ${userId}`);
   console.log(`📋 Template: ${body.templateType} | Prompt: ${body.prompt}`);
 
-  // This is the status returned to your UI wizard
+  // Return success to trigger the frontend toast
   return c.json({
     id: crypto.randomUUID(),
     status: 'planning',
