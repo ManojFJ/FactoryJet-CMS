@@ -3,9 +3,7 @@
 import { useState } from 'react';
 import { Copy, Check, Maximize2, Minimize2 } from 'lucide-react';
 
-// ============================================
 // TYPES
-// ============================================
 
 interface DiffViewerProps {
   patch: string;
@@ -19,17 +17,13 @@ interface DiffLine {
   newLineNum?: number;
 }
 
-// ============================================
 // COMPONENT
-// ============================================
 
 export function DiffViewer({ patch, fileName }: DiffViewerProps) {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  // ============================================
   // DIFF PARSER
-  // ============================================
 
   /**
    * Parse unified diff format into structured lines
@@ -91,9 +85,7 @@ export function DiffViewer({ patch, fileName }: DiffViewerProps) {
 
   const diffLines = parseDiff(patch);
 
-  // ============================================
   // HANDLERS
-  // ============================================
 
   const copyToClipboard = async () => {
     try {
@@ -105,9 +97,7 @@ export function DiffViewer({ patch, fileName }: DiffViewerProps) {
     }
   };
 
-  // ============================================
   // STYLING HELPERS
-  // ============================================
 
   const getLineClass = (type: string) => {
     switch (type) {
@@ -133,9 +123,7 @@ export function DiffViewer({ patch, fileName }: DiffViewerProps) {
     }
   };
 
-  // ============================================
   // RENDER
-  // ============================================
 
   return (
     <div className="diff-viewer-container bg-zinc-900">
